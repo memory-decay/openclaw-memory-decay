@@ -1,0 +1,18 @@
+{
+  "id": "memory-decay",
+  "name": "Memory Decay",
+  "description": "Human-like memory with decay and reinforcement",
+  "version": "0.1.0",
+  "kind": "memory",
+  "skills": ["skills/remember"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "serverPort": { "type": "number", "default": 8100 },
+      "pythonPath": { "type": "string", "default": "python3" },
+      "memoryDecayPath": { "type": "string" },
+      "persistenceDir": { "type": "string", "default": "~/.openclaw/memory-decay-data/" },
+      "autoSave": { "type": "boolean", "default": true }
+    }
+  }
+}
