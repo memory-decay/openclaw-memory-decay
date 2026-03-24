@@ -1,5 +1,6 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
+import { MemoryDecayClient } from "./client.js";
 import { MemoryDecayService, type ServiceConfig } from "./service.js";
 import { shouldMigrate, migrateMarkdownMemories } from "./migrator.js";
 import { toFreshness } from "./types.js";
@@ -27,17 +28,21 @@ const memoryDecayPlugin = {
   configSchema: emptyPluginConfigSchema(),
 
   register(api: OpenClawPluginApi) {
+    const cfg = api.pluginConfig ?? {};
+    const port = (cfg.serverPort as number) ?? 8100;
+
+    // Shared client — works as long as the server process is listening
+    const client = new MemoryDecayClient(port);
     let service: MemoryDecayService | null = null;
 
     // --- Service ---
     api.registerService({
       id: "memory-decay-server",
       async start(ctx) {
-        const cfg = api.pluginConfig ?? {};
         const config: ServiceConfig = {
           pythonPath: (cfg.pythonPath as string) ?? "python3",
           memoryDecayPath: (cfg.memoryDecayPath as string) ?? "",
-          port: (cfg.serverPort as number) ?? 8100,
+          port,
           persistenceDir: (cfg.persistenceDir as string) ?? "~/.openclaw/memory-decay-data/",
           cacheDir: cfg.cacheDir as string | undefined,
           embeddingProvider: (cfg.embeddingProvider as string) ?? "local",
@@ -78,9 +83,6 @@ const memoryDecayPlugin = {
           required: ["query"],
         },
         async execute(toolCallId: string, params: Record<string, unknown>) {
-          if (!service) throw new Error("Memory service not running");
-          const client = service.getClient();
-
           const res = await client.search({
             query: params.query as string,
             top_k: (params.top_k as number) ?? 5,
@@ -113,9 +115,6 @@ const memoryDecayPlugin = {
           required: ["text"],
         },
         async execute(toolCallId: string, params: Record<string, unknown>) {
-          if (!service) throw new Error("Memory service not running");
-          const client = service.getClient();
-
           const res = await client.store({
             text: params.text as string,
             importance: (params.importance as number) ?? 0.8,
@@ -135,9 +134,6 @@ const memoryDecayPlugin = {
 
     // Bootstrap: inject memory instructions + apply time-based decay
     api.on("before_prompt_build", async (event, ctx) => {
-      if (!service) return;
-      const client = service.getClient();
-
       try {
         await client.autoTick();
       } catch {
@@ -149,12 +145,9 @@ const memoryDecayPlugin = {
 
     // Auto-save: store every conversation turn at low importance
     api.on("message_received", async (event, ctx) => {
-      if (!service) return;
-
       const content = event.content;
       if (!content || content.length < MIN_MESSAGE_LENGTH) return;
 
-      const client = service.getClient();
       try {
         await client.store({
           text: content,
@@ -169,9 +162,6 @@ const memoryDecayPlugin = {
 
     // Compaction: save session summary before context is compressed
     api.on("before_compaction", async (event, ctx) => {
-      if (!service) return;
-
-      const client = service.getClient();
       try {
         await client.store({
           text: `[Session summary] Compaction triggered. Topics discussed in this session.`,
