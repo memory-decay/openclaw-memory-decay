@@ -39,6 +39,11 @@ const memoryDecayPlugin = {
           memoryDecayPath: (cfg.memoryDecayPath as string) ?? "",
           port: (cfg.serverPort as number) ?? 8100,
           persistenceDir: (cfg.persistenceDir as string) ?? "~/.openclaw/memory-decay-data/",
+          cacheDir: cfg.cacheDir as string | undefined,
+          embeddingProvider: cfg.embeddingProvider as string | undefined,
+          embeddingModel: cfg.embeddingModel as string | undefined,
+          embeddingApiKey: cfg.embeddingApiKey as string | undefined,
+          experimentDir: cfg.experimentDir as string | undefined,
         };
 
         if (!config.memoryDecayPath) {

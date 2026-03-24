@@ -6,6 +6,11 @@ export interface ServiceConfig {
   memoryDecayPath: string;
   port: number;
   persistenceDir: string;
+  cacheDir?: string;
+  embeddingProvider?: string;
+  embeddingModel?: string;
+  embeddingApiKey?: string;
+  experimentDir?: string;
 }
 
 export class MemoryDecayService {
@@ -21,12 +26,19 @@ export class MemoryDecayService {
   }
 
   async start(): Promise<void> {
-    this.process = spawn(this.config.pythonPath, [
+    const args = [
       "-m", "memory_decay.server",
       "--host", "127.0.0.1",
       "--port", String(this.config.port),
       "--persistence-dir", this.config.persistenceDir,
-    ], {
+    ];
+    if (this.config.cacheDir) args.push("--cache-dir", this.config.cacheDir);
+    if (this.config.embeddingProvider) args.push("--embedding-provider", this.config.embeddingProvider);
+    if (this.config.embeddingModel) args.push("--embedding-model", this.config.embeddingModel);
+    if (this.config.embeddingApiKey) args.push("--embedding-api-key", this.config.embeddingApiKey);
+    if (this.config.experimentDir) args.push("--experiment-dir", this.config.experimentDir);
+
+    this.process = spawn(this.config.pythonPath, args, {
       cwd: this.config.memoryDecayPath,
       env: { ...process.env, PYTHONPATH: `${this.config.memoryDecayPath}/src` },
       stdio: ["ignore", "pipe", "pipe"],
