@@ -23,23 +23,25 @@ cd openclaw-memory-decay
 # 2. Install dependencies
 npm install
 
-# 3. Install as OpenClaw plugin
-openclaw plugins install /path/to/openclaw-memory-decay
+# 3. Install as OpenClaw plugin (link mode for development)
+openclaw plugins install -l .
 
-# 4. Enable the plugin and set it as memory backend
-openclaw plugins enable memory-decay
+# 4. Restart the gateway
+openclaw gateway restart
 ```
+
+The installer automatically:
+- Sets `memory-decay` as the exclusive memory slot
+- Disables `memory-core` and `memory-lancedb`
+- Registers the plugin config entry
 
 ## Configuration
 
-After installation, configure the plugin in `~/.openclaw/openclaw.json`:
+After installation, add `config` to the plugin entry in `~/.openclaw/openclaw.json`:
 
 ```json
 {
   "plugins": {
-    "slots": {
-      "memory": "memory-decay"
-    },
     "entries": {
       "memory-decay": {
         "enabled": true,
