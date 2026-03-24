@@ -9,7 +9,13 @@
   "dependencies": {
     "@sinclair/typebox": "^0.31.0"
   },
+  "peerDependencies": {
+    "openclaw": "*"
+  },
   "devDependencies": {
     "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "setup": "node scripts/link-sdk.mjs"
   }
 }

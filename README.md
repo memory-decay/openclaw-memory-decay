@@ -13,27 +13,37 @@ Replaces the default `memory-core` plugin with a decay-aware memory system where
 - **Migration** — imports existing Markdown memories from `~/.openclaw/workspace/memory/` on first run
 - **`/remember` skill** — users can explicitly ask the agent to remember something
 
+## Prerequisites
+
+- [OpenClaw](https://openclaw.ai) installed globally (`npm i -g openclaw`)
+- [memory-decay](https://github.com/tmdgusya/memory-decay) cloned and Python dependencies installed
+- Python 3.9+
+
 ## Installation
 
 ```bash
-# 1. Clone the repository
+# 1. Clone this repository
 git clone https://github.com/tmdgusya/openclaw-memory-decay.git
 cd openclaw-memory-decay
 
 # 2. Install dependencies
 npm install
 
-# 3. Install as OpenClaw plugin (link mode for development)
+# 3. Link the OpenClaw SDK (required for module resolution)
+npm run setup
+
+# 4. Install as OpenClaw plugin (link mode)
 openclaw plugins install -l .
 
-# 4. Restart the gateway
+# 5. Restart the gateway
 openclaw gateway restart
 ```
 
-The installer automatically:
-- Sets `memory-decay` as the exclusive memory slot
-- Disables `memory-core` and `memory-lancedb`
-- Registers the plugin config entry
+> **Why `npm run setup`?**
+> External OpenClaw plugins need to resolve `openclaw/plugin-sdk` at load time.
+> Stock plugins resolve this automatically (they live inside the openclaw package),
+> but link-mode plugins need a symlink from `node_modules/openclaw` to the global
+> installation. The setup script creates this symlink.
 
 ## Configuration
 
@@ -47,7 +57,8 @@ After installation, add `config` to the plugin entry in `~/.openclaw/openclaw.js
         "enabled": true,
         "config": {
           "memoryDecayPath": "/path/to/memory-decay",
-          "persistenceDir": "~/.openclaw/memory-decay-data/"
+          "persistenceDir": "~/.openclaw/memory-decay-data/",
+          "serverPort": 8300
         }
       }
     }
@@ -65,17 +76,13 @@ After installation, add `config` to the plugin entry in `~/.openclaw/openclaw.js
 | `persistenceDir` | `~/.openclaw/memory-decay-data/` | Where memory graph state is persisted |
 | `autoSave` | `true` | Auto-save conversation turns at low importance |
 
-## Prerequisites
-
-- [memory-decay](https://github.com/tmdgusya/memory-decay) cloned and dependencies installed
-- Python 3.10+
-- OpenClaw gateway running
-
 ## How It Works
 
 ```
-OpenClaw Agent ←→ Plugin (TypeScript) ←→ memory-decay server (Python/FastAPI)
+OpenClaw Agent <-> Plugin (TypeScript) <-> memory-decay server (Python/FastAPI)
 ```
+
+The plugin manages the Python server lifecycle automatically — it starts when the gateway starts and stops when it shuts down.
 
 ### Two-Layer Memory Storage
 
@@ -92,6 +99,26 @@ OpenClaw Agent ←→ Plugin (TypeScript) ←→ memory-decay server (Python/Fas
 - Agent-initiated saves persist because high importance slows decay
 - Every `memory_search` hit reinforces matched memories, making them last longer
 - The result: important information survives; noise fades naturally
+
+## Troubleshooting
+
+### `Cannot find module 'openclaw/plugin-sdk'`
+
+Run `npm run setup` to link the OpenClaw SDK. If that fails, manually create the symlink:
+
+```bash
+ln -s "$(npm root -g)/openclaw" node_modules/openclaw
+```
+
+### `Memory service not running`
+
+Check the server is running: `curl http://127.0.0.1:8300/health`
+
+If not, verify `memoryDecayPath` in your config points to a valid memory-decay repo with Python dependencies installed.
+
+### Plugin shows `error` status
+
+Run `openclaw plugins doctor` to see the error details.
 
 ## License
 
