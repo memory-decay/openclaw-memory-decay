@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-memory-decay",
+  "name": "memory-decay",
   "version": "0.1.0",
   "type": "module",
   "description": "OpenClaw memory plugin backed by memory-decay engine",
