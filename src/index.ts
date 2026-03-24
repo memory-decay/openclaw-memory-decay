@@ -12,6 +12,8 @@ You have access to a decay-aware memory system. Use it actively:
 - **memory_store**: Save important facts, user preferences, decisions, and commitments.
   Use this proactively — don't wait to be asked. If something seems worth remembering, store it.
 
+**IMPORTANT**: Do NOT write memory files to workspace/memory/ or any file path. Always use the memory_store tool instead. All memory operations must go through this tool — it handles persistence, decay, and retrieval automatically.
+
 Your memories naturally decay over time. Frequently recalled memories grow stronger; forgotten ones fade. This is by design.`;
 
 const MIN_MESSAGE_LENGTH = 20;
