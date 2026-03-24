@@ -1,3 +1,5 @@
+![Memory Decay Banner](assets/banner.png)
+
 # openclaw-memory-decay
 
 **Give your OpenClaw a memory — one that forgets.**
