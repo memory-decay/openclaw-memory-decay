@@ -5,8 +5,7 @@ export interface ServiceConfig {
   pythonPath: string;
   memoryDecayPath: string;
   port: number;
-  persistenceDir: string;
-  cacheDir?: string;
+  dbPath: string;
   embeddingProvider?: string;
   embeddingModel?: string;
   embeddingApiKey?: string;
@@ -31,9 +30,8 @@ export class MemoryDecayService {
       "-m", "memory_decay.server",
       "--host", "127.0.0.1",
       "--port", String(this.config.port),
-      "--persistence-dir", this.config.persistenceDir,
+      "--db-path", this.config.dbPath,
     ];
-    if (this.config.cacheDir) args.push("--cache-dir", this.config.cacheDir);
     if (this.config.embeddingProvider) args.push("--embedding-provider", this.config.embeddingProvider);
     if (this.config.embeddingModel) args.push("--embedding-model", this.config.embeddingModel);
     if (this.config.embeddingApiKey) args.push("--embedding-api-key", this.config.embeddingApiKey);

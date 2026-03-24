@@ -43,8 +43,7 @@ const memoryDecayPlugin = {
           pythonPath: (cfg.pythonPath as string) ?? "python3",
           memoryDecayPath: (cfg.memoryDecayPath as string) ?? "",
           port,
-          persistenceDir: (cfg.persistenceDir as string) ?? "~/.openclaw/memory-decay-data/",
-          cacheDir: cfg.cacheDir as string | undefined,
+          dbPath: (cfg.dbPath as string) ?? "~/.openclaw/memory-decay-data/memories.db",
           embeddingProvider: (cfg.embeddingProvider as string) ?? "local",
           embeddingModel: cfg.embeddingModel as string | undefined,
           embeddingApiKey: cfg.embeddingApiKey as string | undefined,
@@ -170,6 +169,15 @@ const memoryDecayPlugin = {
         });
       } catch (err) {
         api.logger.error(`Compaction save failed: ${err}`);
+      }
+    });
+
+    // Session end: apply time-based decay for elapsed time between sessions
+    api.on("session_end", async (event, ctx) => {
+      try {
+        await client.autoTick();
+      } catch (err) {
+        api.logger.error(`Session-end tick failed: ${err}`);
       }
     });
   },

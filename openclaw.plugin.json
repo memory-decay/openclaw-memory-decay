@@ -11,7 +11,7 @@
       "serverPort": { "type": "number", "default": 8100 },
       "pythonPath": { "type": "string", "default": "python3" },
       "memoryDecayPath": { "type": "string" },
-      "persistenceDir": { "type": "string", "default": "~/.openclaw/memory-decay-data/" },
+      "dbPath": { "type": "string", "default": "~/.openclaw/memory-decay-data/memories.db" },
       "autoSave": { "type": "boolean", "default": true }
     }
   }
