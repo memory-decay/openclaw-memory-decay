@@ -49,19 +49,6 @@ const memoryDecayPlugin = {
         service = new MemoryDecayService(config);
         await service.start();
         ctx.logger.info("Server started");
-
-        // Auto-migrate existing Markdown memories on first run
-        const resolvedPersistenceDir = config.persistenceDir.replace("~", process.env.HOME ?? "~");
-        if (await shouldMigrate(resolvedPersistenceDir)) {
-          const memoryDir = `${process.env.HOME}/.openclaw/workspace/memory`;
-          try {
-            const client = service.getClient();
-            const result = await migrateMarkdownMemories(memoryDir, client, resolvedPersistenceDir);
-            ctx.logger.info(`Migrated ${result.migrated} memories from ${result.files} files`);
-          } catch (err) {
-            ctx.logger.error(`Migration failed: ${err}`);
-          }
-        }
       },
       async stop(ctx) {
         if (service) {

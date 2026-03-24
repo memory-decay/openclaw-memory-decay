@@ -4,7 +4,7 @@
   "description": "Human-like memory with decay and reinforcement",
   "version": "0.1.0",
   "kind": "memory",
-  "skills": ["skills/remember", "skills/recall", "skills/forget", "skills/memory-status"],
+  "skills": ["skills/remember", "skills/recall", "skills/forget", "skills/memory-status", "skills/migrate"],
   "configSchema": {
     "type": "object",
     "properties": {
