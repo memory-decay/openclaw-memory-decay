@@ -68,7 +68,7 @@ const memoryDecayPlugin = {
           },
           required: ["query"],
         },
-        async execute(params: Record<string, unknown>) {
+        async execute(toolCallId: string, params: Record<string, unknown>) {
           if (!service) throw new Error("Memory service not running");
           const client = service.getClient();
 
@@ -103,7 +103,7 @@ const memoryDecayPlugin = {
           },
           required: ["text"],
         },
-        async execute(params: Record<string, unknown>) {
+        async execute(toolCallId: string, params: Record<string, unknown>) {
           if (!service) throw new Error("Memory service not running");
           const client = service.getClient();
 
