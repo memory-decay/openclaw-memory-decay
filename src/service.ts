@@ -10,6 +10,7 @@ export interface ServiceConfig {
   embeddingProvider?: string;
   embeddingModel?: string;
   embeddingApiKey?: string;
+  embeddingDim?: number;
   experimentDir?: string;
 }
 
@@ -36,6 +37,7 @@ export class MemoryDecayService {
     if (this.config.embeddingProvider) args.push("--embedding-provider", this.config.embeddingProvider);
     if (this.config.embeddingModel) args.push("--embedding-model", this.config.embeddingModel);
     if (this.config.embeddingApiKey) args.push("--embedding-api-key", this.config.embeddingApiKey);
+    if (this.config.embeddingDim) args.push("--embedding-dim", String(this.config.embeddingDim));
     if (this.config.experimentDir) args.push("--experiment-dir", this.config.experimentDir);
 
     this.process = spawn(this.config.pythonPath, args, {
