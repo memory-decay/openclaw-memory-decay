@@ -13,8 +13,9 @@ You have access to a decay-aware memory system. Use it actively:
   Results include a "freshness" indicator (fresh/normal/stale) — treat stale memories with caution, they may be outdated.
 - **memory_store**: Save important facts, user preferences, decisions, and commitments.
   Use this proactively — don't wait to be asked. If something seems worth remembering, store it.
+- **memory_store_batch**: Save multiple memories at once. Use this when you have several things to remember — it is faster than calling memory_store multiple times.
 
-**IMPORTANT**: Do NOT write memory files to workspace/memory/ or any file path. Always use the memory_store tool instead. All memory operations must go through this tool — it handles persistence, decay, and retrieval automatically.
+**IMPORTANT**: Do NOT write memory files to workspace/memory/ or any file path. Always use the memory_store / memory_store_batch tools instead. All memory operations must go through these tools — they handle persistence, decay, and retrieval automatically.
 
 Your memories naturally decay over time. Frequently recalled memories grow stronger; forgotten ones fade. This is by design.`;
 
@@ -30,6 +31,7 @@ const memoryDecayPlugin = {
   register(api: OpenClawPluginApi) {
     const cfg = api.pluginConfig ?? {};
     const port = (cfg.serverPort as number) ?? 8100;
+    const autoSave = cfg.autoSave !== false; // default true
 
     // Shared client — works as long as the server process is listening
     const client = new MemoryDecayClient(port);
@@ -69,8 +71,12 @@ const memoryDecayPlugin = {
     });
 
     // --- Tools ---
-    api.registerTool(
-      (toolCtx) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyApi = api as any;
+
+    anyApi.registerTool(
+      (toolCtx: any) => ({
+        label: "memory_search",
         name: "memory_search",
         description: "Search memories with decay-aware ranking. Returns results with freshness indicators.",
         parameters: {
@@ -100,8 +106,9 @@ const memoryDecayPlugin = {
       { names: ["memory_search"] },
     );
 
-    api.registerTool(
-      (toolCtx) => ({
+    anyApi.registerTool(
+      (toolCtx: any) => ({
+        label: "memory_store",
         name: "memory_store",
         description: "Save an important memory. Use proactively for facts, preferences, decisions.",
         parameters: {
@@ -129,6 +136,62 @@ const memoryDecayPlugin = {
       { names: ["memory_store"] },
     );
 
+    anyApi.registerTool(
+      (toolCtx: any) => ({
+        label: "memory_store_batch",
+        name: "memory_store_batch",
+        description:
+          "Save multiple memories at once in a single request. More efficient than calling memory_store repeatedly. Each item can have its own importance and category.",
+        parameters: {
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              description: "Array of memories to store",
+              items: {
+                type: "object",
+                properties: {
+                  text: { type: "string", description: "The memory content to store" },
+                  importance: { type: "number", description: "0.0-1.0, default 0.8" },
+                  category: { type: "string", description: "fact, episode, preference, decision" },
+                  mtype: { type: "string", description: "fact or episode, default fact" },
+                },
+                required: ["text"],
+              },
+            },
+          },
+          required: ["items"],
+        },
+        async execute(toolCallId: string, params: Record<string, unknown>) {
+          const items = params.items as Array<Record<string, unknown>>;
+          if (!items || items.length === 0) {
+            return {
+              content: [{ type: "text" as const, text: "No items provided" }],
+            };
+          }
+
+          const storeItems = items.map((item) => ({
+            text: item.text as string,
+            importance: (item.importance as number) ?? 0.8,
+            category: (item.category as string) ?? "fact",
+            mtype: (item.mtype as string) ?? "fact",
+          }));
+
+          const res = await client.storeBatch(storeItems);
+
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Stored ${res.count} memories: ${res.ids.join(", ")}`,
+              },
+            ],
+          };
+        },
+      }),
+      { names: ["memory_store_batch"] },
+    );
+
     // --- Hooks ---
 
     // Bootstrap: inject memory instructions + apply time-based decay
@@ -143,21 +206,25 @@ const memoryDecayPlugin = {
     });
 
     // Auto-save: store every conversation turn at low importance
-    api.on("message_received", async (event, ctx) => {
-      const content = event.content;
-      if (!content || content.length < MIN_MESSAGE_LENGTH) return;
+    // Only active when autoSave is true (default); when disabled, the agent
+    // is expected to use memory_store proactively instead.
+    if (autoSave) {
+      api.on("message_received", async (event, ctx) => {
+        const content = event.content;
+        if (!content || content.length < MIN_MESSAGE_LENGTH) return;
 
-      try {
-        await client.store({
-          text: content,
-          importance: 0.3,
-          mtype: "episode",
-          speaker: event.from ?? "user",
-        });
-      } catch (err) {
-        api.logger.error(`Auto-save failed: ${err}`);
-      }
-    });
+        try {
+          await client.store({
+            text: content,
+            importance: 0.3,
+            mtype: "episode",
+            speaker: event.from ?? "user",
+          });
+        } catch (err) {
+          api.logger.error(`Auto-save failed: ${err}`);
+        }
+      });
+    }
 
     // Compaction: save session summary before context is compressed
     api.on("before_compaction", async (event, ctx) => {
