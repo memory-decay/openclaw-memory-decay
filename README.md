@@ -1,53 +1,85 @@
 # openclaw-memory-decay
 
-OpenClaw memory plugin backed by [memory-decay](https://github.com/tmdgusya/memory-decay) — human-like memory with decay and reinforcement.
+**Give your OpenClaw a memory — one that forgets.**
 
-Replaces the default `memory-core` plugin with a decay-aware memory system where frequently recalled memories grow stronger and forgotten ones naturally fade.
+An OpenClaw plugin that replaces flat file-based memory with a human-like decay system. Important things stick. Noise fades. Your agent remembers what matters without drowning in everything else.
+
+Built on [memory-decay-core](https://github.com/memory-decay/memory-decay-core) — a mathematical memory model where activation decays over time, stability grows through recall, and retrieval consolidation reinforces what you actually use.
+
+## Why
+
+AI agents forget everything between sessions. The usual fix: dump everything into files and load it all back.
+
+That works. Until it doesn't.
+
+- 50 lines of memory → great. 500 lines → context pollution. 5000 lines → the agent stops attending to what matters.
+- Everything is stored equally. A one-off joke about coffee has the same weight as your API architecture decisions.
+- Retrieval is binary: either it's in the file or it isn't. No notion of "I think I remember this, but I'm not sure."
+
+`openclaw-memory-decay` solves this with **decay**:
+
+- Memories have an activation score that decreases over time — like human forgetting
+- Important memories decay slower; trivial ones fade fast
+- When your agent recalls a memory, it gets reinforced — the testing effect
+- Search results come with freshness indicators: `fresh`, `normal`, `stale`
+- The result: your agent naturally retains what matters and loses what doesn't
+
+```
+Activation
+  1.0 ┤●
+      │ ●●                                     ● (reinforced — recalled)
+  0.8 ┤  ●●                                  ●●●
+      │    ●●●●                            ●●
+  0.6 ┤      ●●●●●●                    ●●●●
+      │            ●●●●●●          ●●●●
+  0.4 ┤                  ●●●●●●●●●●●
+      │    ▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴▴
+  0.2 ┤                                          (unreinforced — fading)
+      │
+  0.0 └─────────────────────────────────────────── Time
+        ● saved at importance 0.9    ▴ saved at importance 0.3
+```
 
 ## Features
 
-- **Decay-aware search** — retrieval scores factor in recency, importance, and reinforcement history
-- **Automatic conversation storage** — every turn is saved at low importance; decay handles cleanup
-- **Explicit memory saves** — agent proactively stores important facts at high importance via `memory_store` tool
-- **Freshness indicators** — search results include `fresh`/`normal`/`stale` so the agent can judge reliability
-- **Migration** — imports existing Markdown memories from `~/.openclaw/workspace/memory/` on first run
+- **Decay-aware search** — retrieval scores blend semantic similarity with activation and reinforcement history
+- **Automatic noise cleanup** — low-importance memories decay naturally; no manual pruning
+- **Retrieval consolidation** — memories get stronger every time they're recalled, modeling the testing effect
+- **Proactive agent saves** — the agent stores important facts, decisions, and preferences at high importance via `memory_store`
+- **Freshness indicators** — search results include `fresh` / `normal` / `stale` so the agent can judge reliability
+- **Dual-score model** — storage score (can it be found?) and retrieval score (how easily?) are tracked separately
 - **`/remember` skill** — users can explicitly ask the agent to remember something
+- **Markdown migration** — imports existing `~/.openclaw/workspace/memory/` files on first run
 
-## Prerequisites
-
-- [OpenClaw](https://openclaw.ai) installed globally (`npm i -g openclaw`)
-- [memory-decay](https://github.com/tmdgusya/memory-decay) cloned and Python dependencies installed
-- Python 3.9+
-
-## Installation
+## Quick Start
 
 ```bash
-# 1. Clone this repository
+# 1. Clone
 git clone https://github.com/tmdgusya/openclaw-memory-decay.git
 cd openclaw-memory-decay
 
-# 2. Install dependencies
+# 2. Install
 npm install
 
-# 3. Link the OpenClaw SDK (required for module resolution)
+# 3. Link the OpenClaw SDK (resolves plugin module imports)
 npm run setup
 
-# 4. Install as OpenClaw plugin (link mode)
+# 4. Install as OpenClaw plugin
 openclaw plugins install -l .
 
 # 5. Restart the gateway
 openclaw gateway restart
 ```
 
-> **Why `npm run setup`?**
-> External OpenClaw plugins need to resolve `openclaw/plugin-sdk` at load time.
-> Stock plugins resolve this automatically (they live inside the openclaw package),
-> but link-mode plugins need a symlink from `node_modules/openclaw` to the global
-> installation. The setup script creates this symlink.
+### Prerequisites
+
+- [OpenClaw](https://openclaw.ai) installed globally
+- [memory-decay-core](https://github.com/memory-decay/memory-decay-core) with Python dependencies installed
+- Python 3.10+
 
 ## Configuration
 
-After installation, add `config` to the plugin entry in `~/.openclaw/openclaw.json`:
+Add to `~/.openclaw/openclaw.json` under `plugins.entries.memory-decay.config`:
 
 ```json
 {
@@ -56,9 +88,11 @@ After installation, add `config` to the plugin entry in `~/.openclaw/openclaw.js
       "memory-decay": {
         "enabled": true,
         "config": {
-          "memoryDecayPath": "/path/to/memory-decay",
-          "persistenceDir": "~/.openclaw/memory-decay-data/",
-          "serverPort": 8300
+          "memoryDecayPath": "/path/to/memory-decay-core",
+          "dbPath": "~/.openclaw/memory-decay-data/memories.db",
+          "serverPort": 8100,
+          "pythonPath": "/path/to/.venv/bin/python3",
+          "autoSave": false
         }
       }
     }
@@ -66,59 +100,97 @@ After installation, add `config` to the plugin entry in `~/.openclaw/openclaw.js
 }
 ```
 
-### Config Options
-
 | Option | Default | Description |
 |--------|---------|-------------|
 | `serverPort` | `8100` | Port for the memory-decay HTTP server |
-| `pythonPath` | `python3` | Path to Python interpreter |
-| `memoryDecayPath` | (required) | Path to the [memory-decay](https://github.com/tmdgusya/memory-decay) repository |
-| `persistenceDir` | `~/.openclaw/memory-decay-data/` | Where memory graph state is persisted |
-| `autoSave` | `true` | Auto-save conversation turns at low importance |
+| `pythonPath` | `python3` | Path to Python interpreter (use your venv) |
+| `memoryDecayPath` | (required) | Path to memory-decay-core |
+| `dbPath` | `~/.openclaw/memory-decay-data/memories.db` | SQLite database location |
+| `autoSave` | `true` | Auto-save every conversation turn at low importance. Set `false` to let the agent decide what to save |
+
+### autoSave: true vs false
+
+| Mode | Who stores | When | Importance |
+|------|-----------|------|------------|
+| `autoSave: true` | Plugin automatically | Every conversation turn | 0.3 (low) |
+| `autoSave: false` | Agent decides | When something is worth remembering | 0.8 (high, set by agent) |
+
+With `autoSave: false`, the agent uses `memory_store` proactively — storing facts, decisions, preferences, and important context. Noise stays out of the memory system entirely.
 
 ## How It Works
 
 ```
-OpenClaw Agent <-> Plugin (TypeScript) <-> memory-decay server (Python/FastAPI)
+┌──────────────┐         ┌──────────────────┐         ┌────────────────────┐
+│  OpenClaw    │ ◄─────► │  Plugin (TS)     │ ◄─────► │  memory-decay-core │
+│  Agent       │  tools  │  Hook handler    │   HTTP  │  (Python/FastAPI)  │
+│              │         │                  │  :8100  │                    │
+└──────────────┘         └──────────────────┘         └────────────────────┘
+                               │                              │
+                               │ session_end                  │ POST /auto-tick
+                               │ ──────────────►              │
+                               │                              │
+                               │ message_received             │ POST /store
+                               │ (if autoSave)                │
+                               │ ──────────────►              │
+                               │                              │
+                               │ before_compaction            │ POST /store
+                               │                              │
 ```
 
-The plugin manages the Python server lifecycle automatically — it starts when the gateway starts and stops when it shuts down.
+The plugin manages the Python server lifecycle — starts with the gateway, stops on shutdown.
 
-### Two-Layer Memory Storage
+### Memory Lifecycle
 
-| Layer | Trigger | Importance | Decay Rate |
-|-------|---------|------------|------------|
-| Auto-save | Every conversation turn | 0.3 (low) | Fast — fades unless reinforced |
-| Agent-save | Agent uses `memory_store` | 0.8 (high) | Slow — persists long-term |
-| User-save | `/remember` skill | 0.9 (very high) | Very slow |
-| Compaction | Before context compaction | 0.7 | Moderate |
+```
+  Store ──► Activate ──► Decay ──► Search ──► Reinforce ──► Decay (slower)
+    │                        │                         │
+    │                        │                         └──► Stability increases
+    │                        │
+    │                        └──► Low importance fades fast
+    │                             High importance fades slow
+    │
+    └──► Importance set by agent (0.8) or auto-save (0.3)
+```
 
-### Decay Behavior
+1. **Store** — memory enters with an activation of 1.0 and a set importance
+2. **Decay** — each tick, activation decreases based on importance and stability
+3. **Search** — semantic similarity × activation weighting × BM25 re-ranking
+4. **Reinforce** — recalled memories get boosted (testing effect), stability grows
+5. **Forget** — memories with very low activation become practically unretrievable
 
-- Low-importance auto-saved conversations decay quickly, acting as a safety net
-- Agent-initiated saves persist because high importance slows decay
-- Every `memory_search` hit reinforces matched memories, making them last longer
-- The result: important information survives; noise fades naturally
+## Skills
+
+The plugin registers these skills:
+
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| `/remember` | `/remember I prefer dark mode` | Explicitly save something at importance 0.9 |
+| `/recall` | `/recall what did we decide about the API?` | Search memories and summarize |
+| `/forget` | `/forget the temp password` | Delete a specific memory |
+| `/memory-status` | `/memory-status` | Show memory count, tick, and decay stats |
+| `/migrate` | `/migrate` | Import Markdown files from `memory/` directory |
 
 ## Troubleshooting
 
 ### `Cannot find module 'openclaw/plugin-sdk'`
 
-Run `npm run setup` to link the OpenClaw SDK. If that fails, manually create the symlink:
-
 ```bash
-ln -s "$(npm root -g)/openclaw" node_modules/openclaw
+npm run setup
 ```
 
 ### `Memory service not running`
 
-Check the server is running: `curl http://127.0.0.1:8300/health`
+```bash
+curl http://127.0.0.1:8100/health
+```
 
-If not, verify `memoryDecayPath` in your config points to a valid memory-decay repo with Python dependencies installed.
+Check `memoryDecayPath` points to a valid memory-decay-core repo and `pythonPath` hits a venv with dependencies installed.
 
 ### Plugin shows `error` status
 
-Run `openclaw plugins doctor` to see the error details.
+```bash
+openclaw plugins doctor
+```
 
 ## License
 
