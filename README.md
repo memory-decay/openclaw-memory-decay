@@ -47,7 +47,8 @@ Activation
 - **Decay-aware search** — retrieval scores blend semantic similarity with activation and reinforcement history
 - **Automatic noise cleanup** — low-importance memories decay naturally; no manual pruning
 - **Retrieval consolidation** — memories get stronger every time they're recalled, modeling the testing effect
-- **Proactive agent saves** — the agent stores important facts, decisions, and preferences at high importance via `memory_store`
+- **Category-aware storing** — the agent picks the right category (`preference`, `decision`, `fact`, `episode`) with calibrated importance (0.3–1.0), not a flat 0.8 for everything
+- **Proactive agent saves** — the agent stores preferences, decisions, facts, and episodes without being asked
 - **Freshness indicators** — search results include `fresh` / `normal` / `stale` so the agent can judge reliability
 - **Dual-score model** — storage score (can it be found?) and retrieval score (how easily?) are tracked separately
 - **`/remember` skill** — users can explicitly ask the agent to remember something
@@ -119,6 +120,19 @@ Add to `~/.openclaw/openclaw.json` under `plugins.entries.memory-decay.config`:
 
 With `autoSave: false`, the agent uses `memory_store` proactively — storing facts, decisions, preferences, and important context. Noise stays out of the memory system entirely.
 
+## Memory Categories
+
+The bootstrap prompt and skills guide the agent to pick the right category and importance:
+
+| Category | When | Importance | Example |
+|----------|------|------------|---------|
+| `preference` | User's role, style, habits, likes/dislikes | 0.8–1.0 | "User prefers Korean for conversation, English for code" |
+| `decision` | Why X was chosen, tradeoffs, rejected alternatives | 0.8–0.9 | "Chose SQLite over Postgres — single-node, no ops overhead" |
+| `fact` | Technical facts, API behaviors, architecture | 0.7–0.9 | "Auth service returns inconsistent 4xx on token expiry" |
+| `episode` | What was worked on, session context | 0.3–0.6 | "Finished migrating auth middleware" |
+
+The agent stores proactively based on conversation triggers — it doesn't wait for `/remember`.
+
 ## How It Works
 
 ```
@@ -166,8 +180,8 @@ The plugin registers these skills:
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
-| `/remember` | `/remember I prefer dark mode` | Explicitly save something at importance 0.9 |
-| `/recall` | `/recall what did we decide about the API?` | Search memories and summarize |
+| `/remember` | `/remember I prefer dark mode` | Save with correct category and calibrated importance |
+| `/recall` | `/recall what did we decide about the API?` | Search memories with freshness-aware action guidance |
 | `/forget` | `/forget the temp password` | Delete a specific memory |
 | `/memory-status` | `/memory-status` | Show memory count, tick, and decay stats |
 | `/migrate` | `/migrate` | Import Markdown files from `memory/` directory |

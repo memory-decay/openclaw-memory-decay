@@ -11,11 +11,27 @@ You have access to a decay-aware memory system. Use it actively:
 
 - **memory_search**: Search your memories before responding to recall relevant context.
   Results include a "freshness" indicator (fresh/normal/stale) — treat stale memories with caution, they may be outdated.
-- **memory_store**: Save important facts, user preferences, decisions, and commitments.
-  Use this proactively — don't wait to be asked. If something seems worth remembering, store it.
-- **memory_store_batch**: Save multiple memories at once. Use this when you have several things to remember — it is faster than calling memory_store multiple times.
+- **memory_store**: Save important memories proactively — don't wait to be asked.
+- **memory_store_batch**: Save multiple memories at once. More efficient than repeated memory_store calls.
 
-**IMPORTANT**: Do NOT write memory files to workspace/memory/ or any file path. Always use the memory_store / memory_store_batch tools instead. All memory operations must go through these tools — they handle persistence, decay, and retrieval automatically.
+### Category & Importance Guide
+
+ALWAYS set the correct category and importance. Do NOT default everything to "fact" at 0.8.
+
+| Category | When | Importance |
+|----------|------|------------|
+| preference | User's role, likes, style, workflow habits | 0.8-1.0 |
+| decision | Why X was chosen, tradeoffs, rejected alternatives | 0.8-0.9 |
+| fact | Technical facts, API behaviors, architecture | 0.7-0.9 |
+| episode | What was worked on, session context | 0.3-0.6 |
+
+### Store Proactively When:
+- User reveals preferences, expertise, or communication style → preference (0.9)
+- A technical choice is made with tradeoffs → decision (0.8)
+- Non-obvious system behavior is discovered → fact (0.8)
+- A feature or fix is completed → episode (0.5)
+
+**IMPORTANT**: Do NOT write memory files to workspace/memory/ or any file path. Always use memory_store / memory_store_batch tools. They handle persistence, decay, and retrieval automatically.
 
 Your memories naturally decay over time. Frequently recalled memories grow stronger; forgotten ones fade. This is by design.`;
 
