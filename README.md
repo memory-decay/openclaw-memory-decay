@@ -61,18 +61,23 @@ Activation
 git clone https://github.com/tmdgusya/openclaw-memory-decay.git
 cd openclaw-memory-decay
 
-# 2. Install
+# 2. Install dependencies
 npm install
 
 # 3. Link the OpenClaw SDK (resolves plugin module imports)
 npm run setup
 
-# 4. Install as OpenClaw plugin
+# 4. Link as local plugin
 openclaw plugins install -l .
 
-# 5. Restart the gateway
+# 5. (Optional but recommended) Restrict auto-load to trusted plugins only
+openclaw config set plugins.allow '["memory-decay"]'
+
+# 6. Restart the gateway
 openclaw gateway restart
 ```
+
+> **Note:** Steps 4 and 5 both succeed silently if the plugin is already loaded — use `openclaw plugins list` to confirm status is `loaded` and origin is `config`.
 
 ### Prerequisites
 
@@ -187,6 +192,15 @@ The plugin registers these skills:
 | `/migrate` | `/migrate` | Import Markdown files from `memory/` directory |
 
 ## Troubleshooting
+
+### `plugins.allow is empty; discovered non-bundled plugins may auto-load`
+
+This warning appears when `plugins.allow` is not set. While the plugin still loads (since it is explicitly configured in `plugins.entries`), it is good practice to restrict auto-load to trusted plugins only:
+
+```bash
+openclaw config set plugins.allow '["memory-decay"]'
+openclaw gateway restart
+```
 
 ### `Cannot find module 'openclaw/plugin-sdk'`
 
