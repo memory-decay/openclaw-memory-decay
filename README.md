@@ -115,6 +115,28 @@ Add to `~/.openclaw/openclaw.json` under `plugins.entries.memory-decay.config`:
 | `memoryDecayPath` | (required) | Path to memory-decay-core |
 | `dbPath` | `~/.openclaw/memory-decay-data/memories.db` | SQLite database location |
 | `autoSave` | `true` | Auto-save every conversation turn at low importance. Set `false` to let the agent decide what to save |
+| `embeddingProvider` | `local` | Embedding provider: `local`, `openai`, or `gemini` |
+| `embeddingApiKey` | (auto) | API key for embedding provider. Falls back to env vars (see below) |
+| `embeddingModel` | (auto) | Specific embedding model name |
+| `embeddingDim` | (auto) | Embedding dimension (auto-detected from provider) |
+
+### API Key Configuration
+
+The API key for embedding providers is resolved in this order:
+
+1. **Plugin config** — `embeddingApiKey` in `openclaw.json`
+2. **Generic env var** — `MD_EMBEDDING_API_KEY`
+3. **Provider-specific env var** — `OPENAI_API_KEY` (openai) or `GEMINI_API_KEY` / `GOOGLE_API_KEY` (gemini)
+
+```bash
+# Example: use OpenAI embeddings with API key from environment
+export OPENAI_API_KEY="sk-..."
+
+# Or use the generic variable (works with any provider)
+export MD_EMBEDDING_API_KEY="sk-..."
+```
+
+When using the `local` provider (default), no API key is needed — embeddings are computed locally using sentence-transformers.
 
 ### autoSave: true vs false
 

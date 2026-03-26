@@ -57,15 +57,44 @@ const memoryDecayPlugin = {
     api.registerService({
       id: "memory-decay-server",
       async start(ctx) {
+        // Resolve embedding provider: config > env var > default
+        const embeddingProvider =
+          (cfg.embeddingProvider as string) ??
+          process.env.MD_EMBEDDING_PROVIDER ??
+          "local";
+
+        // Resolve embedding model: config > env var
+        const embeddingModel =
+          (cfg.embeddingModel as string) ??
+          process.env.MD_EMBEDDING_MODEL;
+
+        // Resolve embedding API key: config > provider-specific env var > generic env var
+        const embeddingApiKey =
+          (cfg.embeddingApiKey as string) ??
+          process.env.MD_EMBEDDING_API_KEY ??
+          (embeddingProvider === "openai"
+            ? process.env.OPENAI_API_KEY
+            : embeddingProvider === "gemini"
+              ? process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY
+              : undefined);
+
+        if (!embeddingApiKey && embeddingProvider !== "local") {
+          ctx.logger.warn(
+            `No API key found for embedding provider "${embeddingProvider}". ` +
+            `Set MD_EMBEDDING_API_KEY or ${embeddingProvider === "openai" ? "OPENAI_API_KEY" : "GEMINI_API_KEY"} env var.`
+          );
+        }
+
         const config: ServiceConfig = {
           pythonPath: (cfg.pythonPath as string) ?? "python3",
           memoryDecayPath: (cfg.memoryDecayPath as string) ?? "",
           port,
           dbPath: (cfg.dbPath as string) ?? "~/.openclaw/memory-decay-data/memories.db",
-          embeddingProvider: (cfg.embeddingProvider as string) ?? "local",
-          embeddingModel: cfg.embeddingModel as string | undefined,
-          embeddingApiKey: cfg.embeddingApiKey as string | undefined,
-          embeddingDim: cfg.embeddingDim as number | undefined,
+          embeddingProvider,
+          embeddingModel,
+          embeddingApiKey,
+          embeddingDim: (cfg.embeddingDim as number) ??
+            (process.env.MD_EMBEDDING_DIM ? parseInt(process.env.MD_EMBEDDING_DIM, 10) : undefined),
           experimentDir: cfg.experimentDir as string | undefined,
         };
 
