@@ -252,6 +252,92 @@ pip install memory-decay
 openclaw plugins doctor
 ```
 
+## For AI Agents: Self-Installation Guide
+
+> This section is written for LLM agents to follow autonomously. If you're a human, use the [Quick Start](#quick-start) section above.
+
+### Quick Install (one-shot)
+
+```bash
+# 1. Install the backend engine (requires Python 3.10+)
+pip install memory-decay
+
+# 2. Verify
+pip show memory-decay | head -3
+
+# 3. Clone this plugin
+git clone https://github.com/memory-decay/openclaw-memory-decay.git /tmp/openclaw-memory-decay
+cd /tmp/openclaw-memory-decay
+
+# 4. Install dependencies
+npm install
+
+# 5. Link the OpenClaw SDK
+npm run setup
+
+# 6. Install as plugin
+openclaw plugins install -l .
+
+# 7. Restart gateway
+openclaw gateway restart
+
+# 8. Verify plugin is loaded
+openclaw plugins list
+# Look for: memory-decay | loaded
+
+# 9. Check server health
+curl -s http://127.0.0.1:8100/health
+# Expected: {"status":"ok","current_tick":0}
+```
+
+### Diagnosing Issues
+
+**Plugin shows `error` status:**
+```bash
+openclaw plugins doctor
+# Check the error message for missing dependencies or path issues
+```
+
+**`Cannot find module 'openclaw/plugin-sdk'`:**
+```bash
+cd /tmp/openclaw-memory-decay && npm run setup
+```
+
+**`Memory service not running`:**
+```bash
+# Check backend is installed
+pip show memory-decay
+
+# Check if gateway started it
+curl -s http://127.0.0.1:8100/health
+
+# If pip show returns nothing:
+pip install memory-decay
+openclaw gateway restart
+```
+
+**Port conflict (8100 in use):**
+```json
+// In ~/.openclaw/openclaw.json, change:
+"serverPort": 8101
+```
+
+**Embedding errors:**
+```bash
+# Switch to OpenAI if local embeddings fail
+export OPENAI_API_KEY=your-key
+export MD_EMBEDDING_PROVIDER=openai
+openclaw gateway restart
+```
+
+### Key Files
+
+| Path | Purpose |
+|------|---------|
+| `~/.openclaw/openclaw.json` | Plugin configuration |
+| `~/.openclaw/memory-decay-data/memories.db` | Memory database |
+| `~/.openclaw/workspace/memory/` | Legacy memory files (can migrate) |
+
 ## License
 
 MIT
