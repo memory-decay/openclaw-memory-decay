@@ -85,9 +85,26 @@ const memoryDecayPlugin = {
           );
         }
 
+        // Resolve memoryDecayPath: config > pip show memory-decay > error
+        let memoryDecayPath = (cfg.memoryDecayPath as string) ?? "";
+        if (!memoryDecayPath) {
+          try {
+            const { execSync } = await import("node:child_process");
+            const location = execSync("pip show memory-decay 2>/dev/null | grep Location: | cut -d' ' -f2").toString().trim();
+            if (location) memoryDecayPath = location;
+          } catch {}
+        }
+        if (!memoryDecayPath) {
+          ctx.logger.error(
+            "Could not auto-detect memory-decay installation. " +
+            "Run `pip install memory-decay` or set memoryDecayPath in plugin config."
+          );
+          return;
+        }
+
         const config: ServiceConfig = {
           pythonPath: (cfg.pythonPath as string) ?? "python3",
-          memoryDecayPath: (cfg.memoryDecayPath as string) ?? "",
+          memoryDecayPath,
           port,
           dbPath: (cfg.dbPath as string) ?? "~/.openclaw/memory-decay-data/memories.db",
           embeddingProvider,
@@ -97,11 +114,6 @@ const memoryDecayPlugin = {
             (process.env.MD_EMBEDDING_DIM ? parseInt(process.env.MD_EMBEDDING_DIM, 10) : undefined),
           experimentDir: cfg.experimentDir as string | undefined,
         };
-
-        if (!config.memoryDecayPath) {
-          ctx.logger.error("memoryDecayPath is required in plugin config");
-          return;
-        }
 
         service = new MemoryDecayService(config);
         await service.start();

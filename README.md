@@ -57,33 +57,36 @@ Activation
 ## Quick Start
 
 ```bash
-# 1. Clone
-git clone https://github.com/tmdgusya/openclaw-memory-decay.git
+# 1. Install memory-decay-core (the backend engine)
+pip install memory-decay
+
+# 2. Clone this plugin
+git clone https://github.com/memory-decay/openclaw-memory-decay.git
 cd openclaw-memory-decay
 
-# 2. Install dependencies
+# 3. Install dependencies
 npm install
 
-# 3. Link the OpenClaw SDK (resolves plugin module imports)
+# 4. Link the OpenClaw SDK (resolves plugin module imports)
 npm run setup
 
-# 4. Link as local plugin
+# 5. Link as local plugin
 openclaw plugins install -l .
 
-# 5. (Optional but recommended) Restrict auto-load to trusted plugins only
+# 6. (Optional but recommended) Restrict auto-load to trusted plugins only
 openclaw config set plugins.allow '["memory-decay"]'
 
-# 6. Restart the gateway
+# 7. Restart the gateway
 openclaw gateway restart
 ```
 
-> **Note:** Steps 4 and 5 both succeed silently if the plugin is already loaded — use `openclaw plugins list` to confirm status is `loaded` and origin is `config`.
+> **Note:** Steps 5 and 6 both succeed silently if the plugin is already loaded — use `openclaw plugins list` to confirm status is `loaded` and origin is `config`.
 
 ### Prerequisites
 
 - [OpenClaw](https://openclaw.ai) installed globally
-- [memory-decay-core](https://github.com/memory-decay/memory-decay-core) with Python dependencies installed
 - Python 3.10+
+- `memory-decay` Python package (`pip install memory-decay`)
 
 ## Configuration
 
@@ -96,10 +99,8 @@ Add to `~/.openclaw/openclaw.json` under `plugins.entries.memory-decay.config`:
       "memory-decay": {
         "enabled": true,
         "config": {
-          "memoryDecayPath": "/path/to/memory-decay-core",
           "dbPath": "~/.openclaw/memory-decay-data/memories.db",
           "serverPort": 8100,
-          "pythonPath": "/path/to/.venv/bin/python3",
           "autoSave": false
         }
       }
@@ -111,8 +112,8 @@ Add to `~/.openclaw/openclaw.json` under `plugins.entries.memory-decay.config`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `serverPort` | `8100` | Port for the memory-decay HTTP server |
+| `memoryDecayPath` | (auto) | Path to memory-decay-core. Auto-detected from `pip show memory-decay` if not set |
 | `pythonPath` | `python3` | Path to Python interpreter (use your venv) |
-| `memoryDecayPath` | (required) | Path to memory-decay-core |
 | `dbPath` | `~/.openclaw/memory-decay-data/memories.db` | SQLite database location |
 | `autoSave` | `true` | Auto-save every conversation turn at low importance. Set `false` to let the agent decide what to save |
 | `embeddingProvider` | `local` | Embedding provider: `local`, `openai`, or `gemini` |
@@ -233,10 +234,17 @@ npm run setup
 ### `Memory service not running`
 
 ```bash
+# Check if memory-decay is installed
+pip show memory-decay
+
+# Check server health
 curl http://127.0.0.1:8100/health
 ```
 
-Check `memoryDecayPath` points to a valid memory-decay-core repo and `pythonPath` hits a venv with dependencies installed.
+If `pip show memory-decay` returns nothing, install it:
+```bash
+pip install memory-decay
+```
 
 ### Plugin shows `error` status
 
