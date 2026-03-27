@@ -16,6 +16,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
+    "postinstall": "node scripts/detect-python.mjs",
     "setup": "node scripts/link-sdk.mjs"
   }
 }

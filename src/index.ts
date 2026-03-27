@@ -85,13 +85,18 @@ const memoryDecayPlugin = {
           );
         }
 
-        // Resolve memoryDecayPath: config > pip show memory-decay > error
+        // Resolve pythonPath + memoryDecayPath: config > .python-env.json (set at install time) > error
         let memoryDecayPath = (cfg.memoryDecayPath as string) ?? "";
+        let pythonPath = (cfg.pythonPath as string) ?? "";
         if (!memoryDecayPath) {
           try {
-            const { execSync } = await import("node:child_process");
-            const location = execSync("pip show memory-decay 2>/dev/null | grep Location: | cut -d' ' -f2").toString().trim();
-            if (location) memoryDecayPath = location;
+            const { readFileSync } = await import("node:fs");
+            const { resolve, dirname } = await import("node:path");
+            const { fileURLToPath } = await import("node:url");
+            const pluginRoot = dirname(fileURLToPath(import.meta.url));
+            const detected = JSON.parse(readFileSync(resolve(pluginRoot, "../.python-env.json"), "utf8"));
+            if (!pythonPath && detected.pythonPath) pythonPath = detected.pythonPath;
+            if (detected.memoryDecayPath) memoryDecayPath = detected.memoryDecayPath;
           } catch {}
         }
         if (!memoryDecayPath) {
@@ -103,7 +108,7 @@ const memoryDecayPlugin = {
         }
 
         const config: ServiceConfig = {
-          pythonPath: (cfg.pythonPath as string) ?? "python3",
+          pythonPath: pythonPath || "python3",
           memoryDecayPath,
           port,
           dbPath: (cfg.dbPath as string) ?? "~/.openclaw/memory-decay-data/memories.db",
