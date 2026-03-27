@@ -4,3 +4,7 @@ dist/
 *.d.ts
 *.js.map
 .python-env.json
+.omx/
+docs/superpowers/
+*.tgz
+test-ci-scenario.mjs
