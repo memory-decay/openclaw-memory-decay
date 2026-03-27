@@ -17,6 +17,8 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "node --test test/*.test.mjs",
+    "test:integration": "docker build -t memory-decay-test -f Dockerfile .. && docker run --rm memory-decay-test",
     "prepublishOnly": "npm run build",
     "postinstall": "node scripts/detect-python.mjs",
     "setup": "node scripts/link-sdk.mjs"

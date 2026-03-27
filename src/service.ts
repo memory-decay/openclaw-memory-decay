@@ -28,6 +28,7 @@ export class MemoryDecayService {
   private restartCount = 0;
   private maxRestarts = 3;
   private stderrTail: string[] = [];
+  private stopped = false;
   private static readonly STDERR_MAX_LINES = 50;
 
   constructor(config: ServiceConfig, logger: Logger) {
@@ -37,6 +38,7 @@ export class MemoryDecayService {
   }
 
   async start(): Promise<void> {
+    this.stopped = false;
     this.stderrTail = [];
 
     const args = [
@@ -82,7 +84,7 @@ export class MemoryDecayService {
           this.logger.error(
             `Server exited with code ${code}${sig}, restarting (${this.restartCount}/${this.maxRestarts})${context}`
           );
-          this.start();
+          this.start().catch(() => {});
         } else {
           this.logger.error(
             `Server exited with code ${code}${sig}, max restarts (${this.maxRestarts}) exhausted${context}`
@@ -95,6 +97,7 @@ export class MemoryDecayService {
   }
 
   async stop(): Promise<void> {
+    this.stopped = true;
     if (this.process) {
       this.maxRestarts = 0;
       this.process.stdout?.removeAllListeners("data");
@@ -117,6 +120,7 @@ export class MemoryDecayService {
   private async waitForHealth(timeoutMs = 15000): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
+      if (this.stopped) return;
       try {
         await this.client.health();
         this.restartCount = 0;
