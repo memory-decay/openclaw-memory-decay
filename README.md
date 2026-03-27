@@ -390,6 +390,67 @@ openclaw gateway restart
 | `~/.openclaw/memory-decay-data/memories.db` | Memory database |
 | `~/.openclaw/workspace/memory/` | Legacy memory files (can migrate) |
 
+## Known Upgrade Issues
+
+These are real migration issues we hit while moving from older releases. If an AI agent is helping with setup, it should check these before assuming the install itself is broken.
+
+### 1. Old `memory-decay` install still exists
+
+Symptom:
+- `duplicate plugin id detected`
+- `plugin id mismatch`
+- both `memory-decay` and `openclaw-memory-decay` appear in `openclaw plugins list`
+
+Fix:
+
+```bash
+openclaw plugins uninstall memory-decay
+openclaw gateway restart
+```
+
+If duplicate warnings still mention `.openclaw-install-stage-*`, remove stale failed-install directories:
+
+```bash
+find ~/.openclaw/extensions -maxdepth 1 -type d -name '.openclaw-install-stage-*' -print
+find ~/.openclaw/extensions -maxdepth 1 -type d -name '.openclaw-install-stage-*' -exec rm -rf {} +
+openclaw gateway restart
+```
+
+### 2. Plugin updated, but port `8100` never comes up
+
+Symptom:
+- `curl http://127.0.0.1:8100/health` times out
+- gateway log says `Could not auto-detect memory-decay installation`
+
+Fix:
+
+```bash
+openclaw config set plugins.entries.openclaw-memory-decay.config.pythonPath "~/.openclaw/venvs/memory-decay/bin/python"
+openclaw config set plugins.entries.openclaw-memory-decay.config.serverPort 8100
+openclaw gateway restart
+```
+
+If you also need to restore the backend root explicitly:
+
+```bash
+openclaw config set plugins.entries.openclaw-memory-decay.config.memoryDecayPath "/absolute/path/to/memory-decay-core"
+openclaw gateway restart
+```
+
+### 3. `memory-decay` is installed, but only in system Python or another venv
+
+Symptom:
+- `pip show memory-decay` looks fine
+- plugin still cannot find `memory_decay.server`
+
+Fix:
+
+```bash
+/absolute/path/to/python -c "import memory_decay.server; print('ok')"
+openclaw config set plugins.entries.openclaw-memory-decay.config.pythonPath "/absolute/path/to/python"
+openclaw gateway restart
+```
+
 ## License
 
 MIT
