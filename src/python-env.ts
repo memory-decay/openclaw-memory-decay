@@ -20,6 +20,10 @@ interface DetectPythonEnvOptions {
   removeTempDir?: (path: string) => void;
 }
 
+const PYTHON_COMMAND_CANDIDATES = process.platform === "win32"
+  ? ["python"]
+  : ["python3", "python", "python3.13", "python3.12", "python3.11", "python3.10"];
+
 export function mergePythonEnv(
   configured: PythonEnvLike,
   detected: PythonEnvLike = {},
@@ -73,7 +77,7 @@ export function buildPythonCandidates({
       join(root, isWin ? ".venv/Scripts/python.exe" : ".venv/bin/python")),
   ].filter((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0 && existsSync(candidate));
 
-  const commandCandidates = isWin ? ["python"] : ["python3", "python"];
+  const commandCandidates = isWin ? ["python"] : PYTHON_COMMAND_CANDIDATES;
   return [...new Set([...pathCandidates, ...commandCandidates])];
 }
 

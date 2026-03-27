@@ -3,6 +3,10 @@ import { existsSync as nodeExistsSync, mkdtempSync, readFileSync, rmSync } from 
 import { homedir as nodeHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
+const PYTHON_COMMAND_CANDIDATES = process.platform === "win32"
+  ? ["python"]
+  : ["python3", "python", "python3.13", "python3.12", "python3.11", "python3.10"];
+
 function resolvePythonPath(command, { execFileSync = nodeExecFileSync, isWin = process.platform === "win32" } = {}) {
   if (isAbsolute(command)) {
     return command;
@@ -43,7 +47,7 @@ export function buildPythonCandidates({
     pathCandidates.push(join(root, isWin ? ".venv/Scripts/python.exe" : ".venv/bin/python"));
   }
 
-  const commandCandidates = isWin ? ["python"] : ["python3", "python"];
+  const commandCandidates = isWin ? ["python"] : PYTHON_COMMAND_CANDIDATES;
   return [...new Set([
     ...pathCandidates.filter((candidate) => existsSync(candidate)),
     ...commandCandidates,
