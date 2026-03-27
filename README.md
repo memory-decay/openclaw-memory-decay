@@ -57,10 +57,12 @@ Activation
 ## Quick Start
 
 ```bash
-# 1. Install memory-decay-core (the backend engine)
-pip install memory-decay
+# 1. Install the backend into a dedicated virtualenv
+python3 -m venv ~/.openclaw/venvs/memory-decay
+~/.openclaw/venvs/memory-decay/bin/pip install memory-decay
 
-# 2. Install this plugin from npm
+# 2. Install this plugin while that venv is active
+source ~/.openclaw/venvs/memory-decay/bin/activate
 openclaw plugins install openclaw-memory-decay
 
 # 3. (Optional but recommended) Restrict auto-load to trusted plugins only
@@ -76,7 +78,41 @@ openclaw gateway restart
 
 - [OpenClaw](https://openclaw.ai) installed globally
 - Python 3.10+
-- `memory-decay` Python package (`pip install memory-decay`)
+- A Python virtualenv containing `memory-decay`
+
+## For Existing Users (Path-Based Install)
+
+If you previously installed this plugin via `openclaw plugins install -l .` (path-based), migrate to the npm package:
+
+```bash
+# 1. Remove the old path-based plugin from config
+# The old entry key was the plugin's source directory path.
+# Your memories and config are preserved — only the plugin source changes.
+
+# 2. Install from npm instead
+openclaw plugins install openclaw-memory-decay
+
+# 3. Re-add your config (if it was lost during migration)
+# Your config under plugins.entries.memory-decay.config is preserved in openclaw.json.
+# If you need to restore it:
+openclaw config set plugins.entries.memory-decay.config.pythonPath "~/.openclaw/venvs/memory-decay/bin/python3"
+openclaw config set plugins.entries.memory-decay.config.memoryDecayPath "~/.openclaw/venvs/memory-decay/lib/python3.x/site-packages"
+
+# 4. Restart gateway
+openclaw gateway restart
+
+# 5. Verify
+openclaw plugins list | grep memory-decay  # should show: memory-decay | loaded
+curl -s http://127.0.0.1:8100/health       # should show: {"status":"ok","current_tick":0}
+```
+
+**Your memories are safe.** The SQLite database (`memories.db`) is not affected by plugin reinstallation.
+
+To update in the future:
+```bash
+openclaw plugins update memory-decay
+openclaw gateway restart
+```
 
 ## Configuration
 
@@ -102,8 +138,8 @@ Add to `~/.openclaw/openclaw.json` under `plugins.entries.memory-decay.config`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `serverPort` | `8100` | Port for the memory-decay HTTP server |
-| `memoryDecayPath` | (auto) | Path to memory-decay-core. Auto-detected from `pip show memory-decay` if not set |
-| `pythonPath` | `python3` | Path to Python interpreter (use your venv) |
+| `memoryDecayPath` | (auto) | Path to memory-decay-core. Auto-detected from the install-time Python environment if not set |
+| `pythonPath` | `python3` | Path to Python interpreter. Set this explicitly if the gateway runs outside the install-time venv |
 | `dbPath` | `~/.openclaw/memory-decay-data/memories.db` | SQLite database location |
 | `autoSave` | `true` | Auto-save every conversation turn at low importance. Set `false` to let the agent decide what to save |
 | `embeddingProvider` | `local` | Embedding provider: `local`, `openai`, or `gemini` |
@@ -224,16 +260,26 @@ openclaw plugins install openclaw-memory-decay
 ### `Memory service not running`
 
 ```bash
-# Check if memory-decay is installed
-pip show memory-decay
+# Check if the configured Python can import the server
+~/.openclaw/venvs/memory-decay/bin/python -c "import memory_decay.server; print('ok')"
 
 # Check server health
 curl http://127.0.0.1:8100/health
 ```
 
-If `pip show memory-decay` returns nothing, install it:
+If the import check fails, install the backend into a virtualenv and either reactivate that venv before reinstalling the plugin or set `pythonPath` explicitly:
 ```bash
-pip install memory-decay
+python3 -m venv ~/.openclaw/venvs/memory-decay
+~/.openclaw/venvs/memory-decay/bin/pip install memory-decay
+```
+
+### `error: externally-managed-environment`
+
+Your system Python is PEP 668 managed. Install `memory-decay` into a virtualenv instead of the system interpreter:
+
+```bash
+python3 -m venv ~/.openclaw/venvs/memory-decay
+~/.openclaw/venvs/memory-decay/bin/pip install memory-decay
 ```
 
 ### Plugin shows `error` status

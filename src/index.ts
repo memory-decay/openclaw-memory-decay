@@ -3,6 +3,7 @@ import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 import { MemoryDecayClient } from "./client.js";
 import { MemoryDecayService, type ServiceConfig } from "./service.js";
 import { shouldMigrate, migrateMarkdownMemories } from "./migrator.js";
+import { mergePythonEnv } from "./python-env.js";
 import { toFreshness } from "./types.js";
 
 const BOOTSTRAP_PROMPT = `## Memory System (memory-decay)
@@ -88,17 +89,20 @@ const memoryDecayPlugin = {
         // Resolve pythonPath + memoryDecayPath: config > .python-env.json (set at install time) > error
         let memoryDecayPath = (cfg.memoryDecayPath as string) ?? "";
         let pythonPath = (cfg.pythonPath as string) ?? "";
-        if (!memoryDecayPath) {
+        let detectedEnv: { memoryDecayPath?: string; pythonPath?: string } = {};
+        if (!memoryDecayPath || !pythonPath) {
           try {
             const { readFileSync } = await import("node:fs");
             const { resolve, dirname } = await import("node:path");
             const { fileURLToPath } = await import("node:url");
             const pluginRoot = dirname(fileURLToPath(import.meta.url));
-            const detected = JSON.parse(readFileSync(resolve(pluginRoot, "../.python-env.json"), "utf8"));
-            if (!pythonPath && detected.pythonPath) pythonPath = detected.pythonPath;
-            if (detected.memoryDecayPath) memoryDecayPath = detected.memoryDecayPath;
+            detectedEnv = JSON.parse(readFileSync(resolve(pluginRoot, "../.python-env.json"), "utf8"));
           } catch {}
         }
+        ({ memoryDecayPath, pythonPath } = mergePythonEnv(
+          { memoryDecayPath, pythonPath },
+          detectedEnv,
+        ));
         if (!memoryDecayPath) {
           ctx.logger.error(
             "Could not auto-detect memory-decay installation. " +
