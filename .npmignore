@@ -1,0 +1,16 @@
+# Files not needed in npm package
+.git
+.gitignore
+node_modules/
+dist/
+*.ts
+!src/**/*.ts
+*.js.map
+*.d.ts.map
+.env
+*.log
+*.md
+!README.md
+docs/
+assets/
+test-ci-scenario.mjs

@@ -60,23 +60,13 @@ Activation
 # 1. Install memory-decay-core (the backend engine)
 pip install memory-decay
 
-# 2. Clone this plugin
-git clone https://github.com/memory-decay/openclaw-memory-decay.git
-cd openclaw-memory-decay
+# 2. Install this plugin from npm
+openclaw plugins install openclaw-memory-decay
 
-# 3. Install dependencies
-npm install
-
-# 4. Link the OpenClaw SDK (resolves plugin module imports)
-npm run setup
-
-# 5. Link as local plugin
-openclaw plugins install -l .
-
-# 6. (Optional but recommended) Restrict auto-load to trusted plugins only
+# 3. (Optional but recommended) Restrict auto-load to trusted plugins only
 openclaw config set plugins.allow '["memory-decay"]'
 
-# 7. Restart the gateway
+# 4. Restart the gateway
 openclaw gateway restart
 ```
 
@@ -228,7 +218,7 @@ openclaw gateway restart
 ### `Cannot find module 'openclaw/plugin-sdk'`
 
 ```bash
-npm run setup
+openclaw plugins install openclaw-memory-decay
 ```
 
 ### `Memory service not running`
@@ -265,27 +255,17 @@ pip install memory-decay
 # 2. Verify
 pip show memory-decay | head -3
 
-# 3. Clone this plugin
-git clone https://github.com/memory-decay/openclaw-memory-decay.git /tmp/openclaw-memory-decay
-cd /tmp/openclaw-memory-decay
+# 3. Install plugin from npm
+openclaw plugins install openclaw-memory-decay
 
-# 4. Install dependencies
-npm install
-
-# 5. Link the OpenClaw SDK
-npm run setup
-
-# 6. Install as plugin
-openclaw plugins install -l .
-
-# 7. Restart gateway
+# 4. Restart gateway
 openclaw gateway restart
 
-# 8. Verify plugin is loaded
+# 5. Verify plugin is loaded
 openclaw plugins list
 # Look for: memory-decay | loaded
 
-# 9. Check server health
+# 6. Check server health
 curl -s http://127.0.0.1:8100/health
 # Expected: {"status":"ok","current_tick":0}
 ```
@@ -300,7 +280,7 @@ openclaw plugins doctor
 
 **`Cannot find module 'openclaw/plugin-sdk'`:**
 ```bash
-cd /tmp/openclaw-memory-decay && npm run setup
+openclaw plugins install openclaw-memory-decay
 ```
 
 **`Memory service not running`:**

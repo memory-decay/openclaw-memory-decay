@@ -1,12 +1,24 @@
 {
-  "name": "memory-decay",
+  "name": "openclaw-memory-decay",
   "version": "0.1.2",
   "type": "module",
   "description": "OpenClaw memory plugin backed by memory-decay engine",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "openclaw": {
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "files": [
+    "src/",
+    "scripts/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node scripts/detect-python.mjs",
+    "setup": "node scripts/link-sdk.mjs"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.31.0"
@@ -17,8 +29,16 @@
   "devDependencies": {
     "typescript": "^5.0.0"
   },
-  "scripts": {
-    "postinstall": "node scripts/detect-python.mjs",
-    "setup": "node scripts/link-sdk.mjs"
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "memory",
+    "ai-agent",
+    "memory-decay"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/memory-decay/openclaw-memory-decay"
   }
 }
