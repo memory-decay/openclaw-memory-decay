@@ -59,19 +59,19 @@ const memoryDecayPlugin = {
       async start(ctx) {
         // Resolve embedding provider: config > env var > default
         const embeddingProvider =
-          (cfg.embeddingProvider as string) ??
-          process.env.MD_EMBEDDING_PROVIDER ??
+          (cfg.embeddingProvider as string) ||
+          process.env.MD_EMBEDDING_PROVIDER ||
           "local";
 
         // Resolve embedding model: config > env var
         const embeddingModel =
-          (cfg.embeddingModel as string) ??
+          (cfg.embeddingModel as string) ||
           process.env.MD_EMBEDDING_MODEL;
 
         // Resolve embedding API key: config > provider-specific env var > generic env var
         const embeddingApiKey =
-          (cfg.embeddingApiKey as string) ??
-          process.env.MD_EMBEDDING_API_KEY ??
+          (cfg.embeddingApiKey as string) ||
+          process.env.MD_EMBEDDING_API_KEY ||
           (embeddingProvider === "openai"
             ? process.env.OPENAI_API_KEY
             : embeddingProvider === "gemini"
