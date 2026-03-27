@@ -131,7 +131,7 @@ const memoryDecayPlugin = {
           experimentDir: cfg.experimentDir as string | undefined,
         };
 
-        service = new MemoryDecayService(config);
+        service = new MemoryDecayService(config, ctx.logger);
         await service.start();
         ctx.logger.info("Server started");
       },
