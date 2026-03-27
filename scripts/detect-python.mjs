@@ -10,7 +10,10 @@ const candidates = isWin ? ["python"] : ["python3", "python"];
 
 const python = candidates.find((py) => {
   try {
-    execSync(`${py} -c "import memory_decay"`, { stdio: "ignore" });
+    execSync(
+      `${py} -c "import memory_decay; import sqlite3; sqlite3.connect(':memory:').enable_load_extension(True)"`,
+      { stdio: "ignore" },
+    );
     return true;
   } catch {
     return false;
