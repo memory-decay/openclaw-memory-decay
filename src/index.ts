@@ -1,9 +1,10 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 import { MemoryDecayClient } from "./client.js";
+import { loadLegacyPluginConfig } from "./legacy-config.js";
 import { MemoryDecayService, type ServiceConfig } from "./service.js";
 import { shouldMigrate, migrateMarkdownMemories } from "./migrator.js";
-import { mergePythonEnv } from "./python-env.js";
+import { detectPythonEnv, mergePythonEnv } from "./python-env.js";
 import { toFreshness } from "./types.js";
 
 const BOOTSTRAP_PROMPT = `## Memory System (memory-decay)
@@ -39,14 +40,14 @@ Your memories naturally decay over time. Frequently recalled memories grow stron
 const MIN_MESSAGE_LENGTH = 20;
 
 const memoryDecayPlugin = {
-  id: "memory-decay",
+  id: "openclaw-memory-decay",
   name: "Memory Decay",
   description: "Human-like memory with decay and reinforcement",
   kind: "memory" as const,
   configSchema: emptyPluginConfigSchema(),
 
   register(api: OpenClawPluginApi) {
-    const cfg = api.pluginConfig ?? {};
+    const cfg = loadLegacyPluginConfig((api.pluginConfig ?? {}) as Record<string, unknown>);
     const port = (cfg.serverPort as number) ?? 8100;
     const autoSave = cfg.autoSave !== false; // default true
 
@@ -90,14 +91,20 @@ const memoryDecayPlugin = {
         let memoryDecayPath = (cfg.memoryDecayPath as string) ?? "";
         let pythonPath = (cfg.pythonPath as string) ?? "";
         let detectedEnv: { memoryDecayPath?: string; pythonPath?: string } = {};
+        const { dirname, resolve } = await import("node:path");
+        const { fileURLToPath } = await import("node:url");
+        const pluginRoot = dirname(fileURLToPath(import.meta.url));
         if (!memoryDecayPath || !pythonPath) {
           try {
             const { readFileSync } = await import("node:fs");
-            const { resolve, dirname } = await import("node:path");
-            const { fileURLToPath } = await import("node:url");
-            const pluginRoot = dirname(fileURLToPath(import.meta.url));
             detectedEnv = JSON.parse(readFileSync(resolve(pluginRoot, "../.python-env.json"), "utf8"));
           } catch {}
+        }
+        if (!detectedEnv.memoryDecayPath || !detectedEnv.pythonPath) {
+          detectedEnv = mergePythonEnv(
+            detectedEnv,
+            detectPythonEnv({ pluginRoot }) ?? {},
+          );
         }
         ({ memoryDecayPath, pythonPath } = mergePythonEnv(
           { memoryDecayPath, pythonPath },
@@ -106,7 +113,7 @@ const memoryDecayPlugin = {
         if (!memoryDecayPath) {
           ctx.logger.error(
             "Could not auto-detect memory-decay installation. " +
-            "Run `pip install memory-decay` or set memoryDecayPath in plugin config."
+            "Install the backend into ~/.openclaw/venvs/memory-decay or set pythonPath/memoryDecayPath in plugin config."
           );
           return;
         }
