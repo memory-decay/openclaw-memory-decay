@@ -280,6 +280,19 @@ python3 -m venv ~/.openclaw/venvs/memory-decay
 ~/.openclaw/venvs/memory-decay/bin/pip install memory-decay
 ```
 
+If `memory-decay` is only installed in your system Python or in some other venv, the plugin may still fail to auto-detect it. In that case, point the plugin at the exact Python you want it to use:
+
+```bash
+openclaw config set plugins.entries.openclaw-memory-decay.config.pythonPath "/absolute/path/to/python"
+openclaw gateway restart
+```
+
+Sanity check the exact interpreter before restarting:
+
+```bash
+/absolute/path/to/python -c "import memory_decay.server; print('ok')"
+```
+
 If you use a different venv path, configure it directly:
 
 ```bash
