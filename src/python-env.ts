@@ -26,11 +26,12 @@ const PYTHON_COMMAND_CANDIDATES = process.platform === "win32"
 
 export function mergePythonEnv(
   configured: PythonEnvLike,
-  detected: PythonEnvLike = {},
-): { memoryDecayPath: string; pythonPath: string } {
+  detected: { memoryDecayPath?: string; pythonPath?: string; backendVersion?: string } = {},
+): { memoryDecayPath: string; pythonPath: string; backendVersion: string } {
   return {
     memoryDecayPath: configured.memoryDecayPath || detected.memoryDecayPath || "",
     pythonPath: configured.pythonPath || detected.pythonPath || "",
+    backendVersion: detected.backendVersion || "unknown",
   };
 }
 
@@ -96,6 +97,8 @@ function resolvePythonPath(
   return execFileSync(resolver, [command], { encoding: "utf8" }).trim().split(/\r?\n/)[0];
 }
 
+export const REQUIRED_BACKEND_VERSION = "0.1.3";
+
 export function detectPythonEnv({
   pluginRoot,
   env = process.env,
@@ -106,7 +109,7 @@ export function detectPythonEnv({
   makeTempDir = () => mkdtempSync(join(tmpdir(), "memory-decay-python-env-")),
   readPathFile = (path) => readFileSync(path, "utf8"),
   removeTempDir = (path) => rmSync(path, { recursive: true, force: true }),
-}: DetectPythonEnvOptions): { memoryDecayPath: string; pythonPath: string } | null {
+}: DetectPythonEnvOptions): { memoryDecayPath: string; pythonPath: string; backendVersion: string } | null {
   for (const candidate of buildPythonCandidates({ pluginRoot, env, isWin, homedir, existsSync })) {
     try {
       execFileSync(candidate, ["-c", "import memory_decay.server"], { stdio: "ignore" });
@@ -126,9 +129,19 @@ export function detectPythonEnv({
       const moduleFile = readPathFile(outputPath).trim();
       removeTempDir(tempDir);
 
+      let backendVersion = "unknown";
+      try {
+        const versionOutput = execFileSync(candidate, [
+          "-c",
+          `import memory_decay; print(getattr(memory_decay, "__version__", "unknown"))`,
+        ], { encoding: "utf8" }).trim();
+        backendVersion = versionOutput || "unknown";
+      } catch {}
+
       return {
         pythonPath: resolvePythonPath(candidate, { execFileSync, isWin }),
         memoryDecayPath: resolveMemoryDecayPath(moduleFile),
+        backendVersion,
       };
     } catch {}
   }

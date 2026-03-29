@@ -4,7 +4,7 @@ import { MemoryDecayClient } from "./client.js";
 import { loadLegacyPluginConfig } from "./legacy-config.js";
 import { MemoryDecayService, type ServiceConfig } from "./service.js";
 import { shouldMigrate, migrateMarkdownMemories } from "./migrator.js";
-import { detectPythonEnv, mergePythonEnv } from "./python-env.js";
+import { detectPythonEnv, mergePythonEnv, REQUIRED_BACKEND_VERSION } from "./python-env.js";
 import { toFreshness } from "./types.js";
 
 const BOOTSTRAP_PROMPT = `## Memory System (memory-decay)
@@ -90,7 +90,7 @@ const memoryDecayPlugin = {
         // Resolve pythonPath + memoryDecayPath: config > .python-env.json (set at install time) > error
         let memoryDecayPath = (cfg.memoryDecayPath as string) ?? "";
         let pythonPath = (cfg.pythonPath as string) ?? "";
-        let detectedEnv: { memoryDecayPath?: string; pythonPath?: string } = {};
+        let detectedEnv: { memoryDecayPath?: string; pythonPath?: string; backendVersion?: string } = {};
         const { dirname, resolve } = await import("node:path");
         const { fileURLToPath } = await import("node:url");
         const pluginRoot = dirname(fileURLToPath(import.meta.url));
@@ -110,6 +110,7 @@ const memoryDecayPlugin = {
           { memoryDecayPath, pythonPath },
           detectedEnv,
         ));
+        const backendVersion = detectedEnv.backendVersion ?? "unknown";
         if (!memoryDecayPath) {
           ctx.logger.error(
             "Could not auto-detect memory-decay installation. " +
@@ -134,6 +135,12 @@ const memoryDecayPlugin = {
         service = new MemoryDecayService(config, ctx.logger);
         await service.start();
         ctx.logger.info("Server started");
+        if (backendVersion !== "unknown" && backendVersion !== REQUIRED_BACKEND_VERSION) {
+          ctx.logger.info(
+            `Backend version ${backendVersion} does not match recommended ${REQUIRED_BACKEND_VERSION}. ` +
+            `To update: pip install memory-decay==${REQUIRED_BACKEND_VERSION}`
+          );
+        }
       },
       async stop(ctx) {
         if (service) {
@@ -292,6 +299,22 @@ const memoryDecayPlugin = {
             importance: 0.3,
             mtype: "episode",
             speaker: event.from ?? "user",
+          });
+        } catch (err) {
+          api.logger.error(`Auto-save failed: ${err}`);
+        }
+      });
+
+      api.on("message_sent", async (event, ctx) => {
+        const content = event.content;
+        if (!content || content.length < MIN_MESSAGE_LENGTH) return;
+
+        try {
+          await client.store({
+            text: content,
+            importance: 0.3,
+            mtype: "episode",
+            speaker: "assistant",
           });
         } catch (err) {
           api.logger.error(`Auto-save failed: ${err}`);
